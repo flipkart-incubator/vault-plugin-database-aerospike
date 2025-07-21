@@ -173,4 +173,5 @@ func (a *Aerospike) RotateRootCredentials(ctx context.Context, statements []stri
 
 	a.RawConfig["password"] = password
 	return a.RawConfig, nil
+
 }
