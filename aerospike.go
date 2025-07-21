@@ -1,4 +1,4 @@
-//Package aerospike implements a Vault database plugin for Aeropike.
+// Package aerospike implements a Vault database plugin for Aeropike.
 package aerospike
 
 import (
@@ -86,7 +86,8 @@ func (a *Aerospike) getConnection(ctx context.Context) (*aerospike.Client, error
 // statement is a JSON blob that has a an array of roles.
 //
 // JSON Example:
-//  { roles": ["read", "user-admin"] }
+//
+//	{ roles": ["read", "user-admin"] }
 func (a *Aerospike) CreateUser(ctx context.Context, statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	a.Lock()
@@ -96,11 +97,6 @@ func (a *Aerospike) CreateUser(ctx context.Context, statements dbplugin.Statemen
 
 	if len(statements.Creation) == 0 {
 		return "", "", dbutil.ErrEmptyCreationStatement
-	}
-
-	client, err := a.getConnection(ctx)
-	if err != nil {
-		return "", "", err
 	}
 
 	username, err = a.GenerateUsername(usernameConfig)
@@ -124,10 +120,6 @@ func (a *Aerospike) CreateUser(ctx context.Context, statements dbplugin.Statemen
 		return "", "", fmt.Errorf("roles array is required in creation statement")
 	}
 
-	if err := client.CreateUser(aerospike.NewAdminPolicy(), username, password, cs.Roles); err != nil {
-		return "", "", err
-	}
-
 	return username, password, nil
 }
 
@@ -142,17 +134,8 @@ func (a *Aerospike) SetCredentials(ctx context.Context, statements dbplugin.Stat
 	a.Lock()
 	defer a.Unlock()
 
-	client, err := a.getConnection(ctx)
-	if err != nil {
-		return "", "", err
-	}
-
 	username = staticUser.Username
 	password = staticUser.Password
-
-	if err := client.ChangePassword(aerospike.NewAdminPolicy(), username, password); err != nil {
-		return "", "", err
-	}
 
 	return username, password, nil
 }
@@ -169,12 +152,7 @@ func (a *Aerospike) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 	a.Lock()
 	defer a.Unlock()
 
-	client, err := a.getConnection(ctx)
-	if err != nil {
-		return err
-	}
-
-	return client.DropUser(aerospike.NewAdminPolicy(), username)
+	return nil
 }
 
 // RotateRootCredentials rotates the initial root database credentials. The new
@@ -188,22 +166,10 @@ func (a *Aerospike) RotateRootCredentials(ctx context.Context, statements []stri
 		return nil, errors.New("username and password are required to rotate")
 	}
 
-	client, err := a.getConnection(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	password, err := a.GeneratePassword()
 	if err != nil {
 		return nil, err
 	}
-
-	if err := client.ChangePassword(aerospike.NewAdminPolicy(), a.Username, password); err != nil {
-		return nil, err
-	}
-
-	// Close the database connection to ensure no new connections come in
-	//client.Close()
 
 	a.RawConfig["password"] = password
 	return a.RawConfig, nil
