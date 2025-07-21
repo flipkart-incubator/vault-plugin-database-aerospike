@@ -99,6 +99,11 @@ func (a *Aerospike) CreateUser(ctx context.Context, statements dbplugin.Statemen
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
+	client, err := a.getConnection(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
 	username, err = a.GenerateUsername(usernameConfig)
 	if err != nil {
 		return "", "", err
@@ -120,6 +125,10 @@ func (a *Aerospike) CreateUser(ctx context.Context, statements dbplugin.Statemen
 		return "", "", fmt.Errorf("roles array is required in creation statement")
 	}
 
+	if err := client.CreateUser(aerospike.NewAdminPolicy(), username, password, cs.Roles); err != nil {
+		return "", "", err
+	}
+
 	return username, password, nil
 }
 
@@ -134,8 +143,17 @@ func (a *Aerospike) SetCredentials(ctx context.Context, statements dbplugin.Stat
 	a.Lock()
 	defer a.Unlock()
 
+	client, err := a.getConnection(ctx)
+	if err != nil {
+		return "", "", err
+	}
+
 	username = staticUser.Username
 	password = staticUser.Password
+
+	if err := client.ChangePassword(aerospike.NewAdminPolicy(), username, password); err != nil {
+		return "", "", err
+	}
 
 	return username, password, nil
 }
@@ -152,7 +170,12 @@ func (a *Aerospike) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 	a.Lock()
 	defer a.Unlock()
 
-	return nil
+	client, err := a.getConnection(ctx)
+	if err != nil {
+		return err
+	}
+
+	return client.DropUser(aerospike.NewAdminPolicy(), username)
 }
 
 // RotateRootCredentials rotates the initial root database credentials. The new
@@ -166,12 +189,23 @@ func (a *Aerospike) RotateRootCredentials(ctx context.Context, statements []stri
 		return nil, errors.New("username and password are required to rotate")
 	}
 
+	client, err := a.getConnection(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	password, err := a.GeneratePassword()
 	if err != nil {
 		return nil, err
 	}
 
+	if err := client.ChangePassword(aerospike.NewAdminPolicy(), a.Username, password); err != nil {
+		return nil, err
+	}
+
+	// Close the database connection to ensure no new connections come in
+	//client.Close()
+
 	a.RawConfig["password"] = password
 	return a.RawConfig, nil
-
 }
