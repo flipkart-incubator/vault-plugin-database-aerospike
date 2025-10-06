@@ -20,8 +20,9 @@ import (
 type aerospikeConnectionProducer struct {
 	Host string `json:"host" structs:"host" mapstructure:"host"`
 
-	Username string `json:"username" structs:"username" mapstructure:"username"`
-	Password string `json:"password" structs:"password" mapstructure:"password"`
+	Username   string `json:"username" structs:"username" mapstructure:"username"`
+	Password   string `json:"password" structs:"password" mapstructure:"password"`
+	AclEnabled bool   `json:"acl_enabled" structs:"acl_enabled" mapstructure:"acl_enabled"`
 
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" structs:"-" mapstructure:"tls_certificate_key"`
 	TLSCAData             []byte `json:"tls_ca"              structs:"-" mapstructure:"tls_ca"`
