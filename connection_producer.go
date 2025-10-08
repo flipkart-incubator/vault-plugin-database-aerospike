@@ -83,7 +83,7 @@ func (c *aerospikeConnectionProducer) Init(ctx context.Context, conf map[string]
 	// and the connection can be established at a later time.
 	c.Initialized = true
 
-	if verifyConnection {
+	if verifyConnection && c.AclEnabled {
 		if _, err := c.Connection(ctx); err != nil {
 			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
