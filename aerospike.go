@@ -120,6 +120,18 @@ func (a *Aerospike) CreateUser(ctx context.Context, statements dbplugin.Statemen
 		return "", "", fmt.Errorf("roles array is required in creation statement")
 	}
 
+	// Only sync with database if ACL is enabled
+	if a.AclEnabled {
+		client, err := a.getConnection(ctx)
+		if err != nil {
+			return "", "", err
+		}
+
+		if err := client.CreateUser(aerospike.NewAdminPolicy(), username, password, cs.Roles); err != nil {
+			return "", "", err
+		}
+	}
+
 	return username, password, nil
 }
 
@@ -137,6 +149,18 @@ func (a *Aerospike) SetCredentials(ctx context.Context, statements dbplugin.Stat
 	username = staticUser.Username
 	password = staticUser.Password
 
+	// Only sync with database if ACL is enabled
+	if a.AclEnabled {
+		client, err := a.getConnection(ctx)
+		if err != nil {
+			return "", "", err
+		}
+
+		if err := client.ChangePassword(aerospike.NewAdminPolicy(), username, password); err != nil {
+			return "", "", err
+		}
+	}
+
 	return username, password, nil
 }
 
@@ -151,6 +175,16 @@ func (a *Aerospike) RevokeUser(ctx context.Context, statements dbplugin.Statemen
 	// Grab the lock
 	a.Lock()
 	defer a.Unlock()
+
+	// Only sync with database if ACL is enabled
+	if a.AclEnabled {
+		client, err := a.getConnection(ctx)
+		if err != nil {
+			return err
+		}
+
+		return client.DropUser(aerospike.NewAdminPolicy(), username)
+	}
 
 	return nil
 }
@@ -169,6 +203,18 @@ func (a *Aerospike) RotateRootCredentials(ctx context.Context, statements []stri
 	password, err := a.GeneratePassword()
 	if err != nil {
 		return nil, err
+	}
+
+	// Only sync with database if ACL is enabled
+	if a.AclEnabled {
+		client, err := a.getConnection(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := client.ChangePassword(aerospike.NewAdminPolicy(), a.Username, password); err != nil {
+			return nil, err
+		}
 	}
 
 	a.RawConfig["password"] = password

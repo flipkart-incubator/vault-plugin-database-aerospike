@@ -20,8 +20,9 @@ import (
 type aerospikeConnectionProducer struct {
 	Host string `json:"host" structs:"host" mapstructure:"host"`
 
-	Username string `json:"username" structs:"username" mapstructure:"username"`
-	Password string `json:"password" structs:"password" mapstructure:"password"`
+	Username   string `json:"username" structs:"username" mapstructure:"username"`
+	Password   string `json:"password" structs:"password" mapstructure:"password"`
+	AclEnabled bool   `json:"acl_enabled" structs:"acl_enabled" mapstructure:"acl_enabled"`
 
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" structs:"-" mapstructure:"tls_certificate_key"`
 	TLSCAData             []byte `json:"tls_ca"              structs:"-" mapstructure:"tls_ca"`
@@ -82,7 +83,7 @@ func (c *aerospikeConnectionProducer) Init(ctx context.Context, conf map[string]
 	// and the connection can be established at a later time.
 	c.Initialized = true
 
-	if verifyConnection {
+	if verifyConnection && c.AclEnabled {
 		if _, err := c.Connection(ctx); err != nil {
 			return nil, errwrap.Wrapf("error verifying connection: {{err}}", err)
 		}
